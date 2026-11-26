@@ -4,7 +4,7 @@
 
 Claude Code ve Codex ile çalışırken her oturumda geçerli olan kurallar, skill'ler, hook'lar ve araçlar.
 
-> **English:** Rules, skills, hooks and tools for Claude Code (and Codex), written for Turkish speakers: the rules make the agent answer in Turkish. Some parts work for anyone: handoff notes when the context or the usage limit runs out, a secret guard that blocks commands which would print secrets, a `/oturum` pane that lists your sessions, and a subagent setup. Needs macOS or Linux with bash, python3, jq and iconv. Run `./install.sh --check` first: it shows what would change and changes nothing. `./install.sh` backs up and rewrites `~/.claude/CLAUDE.md`, adds hooks to `~/.claude/settings.json`, and installs skills, agents and mods. This is a community project, not affiliated with Anthropic or OpenAI.
+> **English:** Rules, skills, hooks and tools for Claude Code (and Codex), written for Turkish speakers: the rules make the agent answer in Turkish. Some parts work for anyone: handoff notes when the context or the usage limit runs out, a secret guard that blocks commands which would print secrets, a `/oturum` pane that lists your sessions, and a subagent setup. Needs macOS or Linux with bash, python3, jq and iconv. Windows support is planned for a later release. Run `./install.sh --check` first: it shows what would change and changes nothing. `./install.sh` backs up and rewrites `~/.claude/CLAUDE.md`, adds hooks to `~/.claude/settings.json`, and installs skills, agents and mods. This is a community project, not affiliated with Anthropic or OpenAI.
 
 Repo Türkçe konuşan kullanıcılar için yazıldı. Kurallar ve Türkçe skill'ler Türkçedir. Bir terimin Türkçe mi İngilizce mi yazılacağına "Terimler" bölümündeki sistem karar verir.
 
@@ -24,7 +24,7 @@ Tek komutla kurulur. Bir makineye de kurabilirsin, istediğin kadar makineye de.
 
 ## Gereksinimler
 
-- macOS veya Linux. Windows desteklenmez.
+- macOS veya Linux. Windows desteği daha sonra eklenecek.
 - git, bash, python3, jq ve iconv.
 - Claude Code. Modlar (`usage-feed` ve `/oturum`) için 2.1.308 veya daha yeni sürüm gerekir. Sürüm eskiyse kurulum yalnız modları atlar.
 - `/oturum` paneli Claude Desktop'ta açılır. Terminalde `/oturum` komutu aynı listeyi metin olarak verir.
