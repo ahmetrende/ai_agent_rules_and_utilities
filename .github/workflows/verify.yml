@@ -1,0 +1,36 @@
+# Runs scripts/verify.sh: the hook suites, the script tests and the self tests.
+# There is no claude CLI on the runner, so the mod tests are skipped here.
+# The workflow runs only when you start it by hand (Actions > verify > Run workflow,
+# or "gh workflow run verify.yml"). A push or a PR does not start it: on this
+# account GitHub does not start jobs (billing), and a failed run on every push is noise.
+# The macOS job runs only when you tick "macos": macOS minutes cost more.
+name: verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      macos:
+        description: "Run the macOS job too"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the tests
+        run: scripts/verify.sh
+
+  macos:
+    if: inputs.macos
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the tests
+        run: scripts/verify.sh

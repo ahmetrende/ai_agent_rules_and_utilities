@@ -1,0 +1,5 @@
+#!/bin/bash
+real=/usr/bin/stat
+if [ "$1" = "-c" ]; then exit 1; fi
+if [ "$1" = "-f" ] && [ "$2" = "%m" ]; then shift 2; exec "$real" -c %Y "$@"; fi
+exec "$real" "$@"

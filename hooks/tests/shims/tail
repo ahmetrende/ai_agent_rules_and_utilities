@@ -1,0 +1,5 @@
+#!/bin/bash
+# BSD tail -r shim for the Linux fallback run: GNU tail has no -r.
+real=/usr/bin/tail
+if [ "$1" = "-r" ]; then shift; exec /usr/bin/awk '{ a[NR] = $0 } END { for (i = NR; i >= 1; i--) print a[i] }' "$@"; fi
+exec "$real" "$@"

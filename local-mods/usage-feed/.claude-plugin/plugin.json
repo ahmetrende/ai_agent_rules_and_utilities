@@ -1,0 +1,5 @@
+{
+  "name": "usage-feed",
+  "version": "0.2.1",
+  "description": "Writes the plan usage the engine pushes (session.measure) to a file a command hook can read, so the model does not poll get_usage."
+}

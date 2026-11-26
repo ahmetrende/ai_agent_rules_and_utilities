@@ -1,0 +1,324 @@
+# Kavram çiftleri: Türkçe biçim <TAB> İngilizce biçim
+#
+# Bu dosya yalnızca hangi sözcüğün hangisinin karşılığı olduğunu söyler.
+# Hangi biçimin kullanılacağına scripts/term_profile.py karar verir.
+#
+# Biçim:
+# - Her satırda iki alan var. Alanları TAB ayırır.
+# - Bir alanda birden çok biçim "|" ile ayrılır. Örnek: kolon|sütun
+# - Alanlar Python regex'idir. Küçük harfle yaz.
+# - Türkçe biçim kök olarak eşleşir: "dosya", "dosyayı" ve "dosyalar" ile de eşleşir.
+# - İngilizce biçim tam sözcük olarak eşleşir. Çoğul (-s, -es) ve kesme işaretli ek de eşleşir.
+# - Kısa veya çok anlamlı köklerden kaçın. Örnek: "yol" kökü "yolla" ile de eşleşir.
+
+# Dosya ve sistem
+dosya	file
+klasör	folder|directory
+komut	command
+komut satırı	command line|cli
+betik	script
+kabuk	shell
+uygulama	app|application
+ara[çc](?!ılı)	tool
+ayar|yapılandır	config|configuration|configure|setting
+yedek	backup
+geri yükle	restore
+güncelle	update
+yükselt	upgrade
+kurulum|kurmak|kurdum|kuruldu	install|installation|setup
+kaldır	remove|uninstall
+sil	delete
+kopyala	copy
+taşı	move
+yeniden adlandır	rename
+arama	search
+filtre	filter
+sırala	sort
+liste	list
+indir	download
+paylaş	share
+kaydet	save
+gönder	send
+oluştur	create
+düzenle	edit
+değiştir	change|modify
+uygula(?!ma)	apply
+etkinleştir	enable
+devre dışı	disable
+izin ver	allow
+ortam değişkeni	environment variable|env var
+bildirim	notification
+örnek	example|sample
+
+# Erişim ve güvenlik
+yetki	permission|privilege
+erişim	access
+şifre(?!le)|parola	password
+kimlik doğrula	authentication|auth
+yetkilendirme	authorization
+kullanıcı	user
+rol(?!l)	role
+belirteç	token
+gizli anahtar|gizli bilgi	secret
+sertifika	certificate|cert
+güvenlik duvarı	firewall
+güvenlik açığı|zafiyet	vulnerability
+güvenlik	security
+denetim	audit
+uyumluluk	compliance
+gizlilik	privacy
+maskeleme	masking
+şifrele	encrypt|encryption
+şifre çöz	decrypt|decryption
+imza	signature
+çerez	cookie
+iki faktörlü	two-factor|2fa|mfa
+en az yetki	least privilege
+sızma testi	penetration test|pentest
+saldırı	attack
+giriş yap	login|log in|sign in
+çıkış yap	logout|log out|sign out
+
+# Ağ ve sunucu
+oturum	session
+bağlantı	connection
+bağlantı noktası	port
+bağlantı havuzu	connection pool
+havuz	pool
+sunucu	server
+istemci	client
+alan adı	domain
+vekil sunucu	proxy
+yük dengeleyici	load balancer
+dinleyici	listener
+istek	request
+yanıt|cevap	response
+uç nokta	endpoint
+web kancası	webhook
+bölge	region
+
+# Kaynak ve performans
+önbellek	cache
+bellek|hafıza	memory|ram
+işlemci	cpu|processor
+depolama	storage
+gecikme	latency|lag|delay
+zaman aşımı	timeout
+yeniden başlat	restart|reboot
+durdur	stop
+çalıştır	run|execute|exec
+süreç	process
+iş parçacığı	thread
+kuyruk	queue
+görev	job|task
+zamanlanmış|zamanlayıcı|zamanlama	schedule|scheduler|scheduling
+iş yükü	workload
+darboğaz	bottleneck
+verim	throughput
+yanıt süresi|tepki süresi	response time
+ölçekle	scale|scaling|scalability
+kota	quota
+eşik	threshold
+maliyet	cost
+fatura	invoice|billing
+yük testi	load test
+
+# İzleme ve olaylar
+olay	event|incident
+uyarı	warning
+alarm	alert
+izleme	monitoring
+gözlemlenebilirlik	observability
+günlük kayıt|günlük dosya|günlükler	log|logging
+hata	error|bug
+hata ayıkla	debug
+istisna	exception
+kesinti	downtime|outage
+çalışma süresi	uptime
+kök neden	root cause
+nöbet	on-call|on call|oncall
+pano	dashboard
+grafik	chart|graph
+metrik	metric
+rapor	report
+özet	summary
+ayrıntı|detay	detail
+istatistik	statistics|stats|statistic
+
+# Database
+veritabanı|veri tabanı	database|db
+veri(?!\s?taban)	data
+tablo	table
+geçici tablo	temp table|temporary table
+tablo alanı	tablespace
+dosya grubu	filegroup|file group
+satır	row
+kolon|sütun	column
+kayıt	record
+sorgu	query
+alt sorgu	subquery
+ipucu	hint|query hint
+şema	schema
+görünüm	view
+tetikleyici	trigger
+saklı yordam|saklı prosedür	stored procedure|procedure
+fonksiyon|işlev	function
+indeks	index|indices
+anahtar	key
+birincil anahtar	primary key|pk
+yabancı anahtar	foreign key|fk
+benzersiz	unique
+kısıt	constraint
+birleşim	join
+toplama	aggregation|aggregate
+kilit	lock
+kilitlenme	deadlock
+engelleme	blocking
+bekle(?!n)	wait|waiting
+yürütme planı|çalıştırma planı	execution plan|query plan
+plan önbelleği	plan cache
+kardinalite	cardinality
+seçicilik	selectivity
+tarama	scan
+parçalanma	fragmentation
+yeniden oluştur	rebuild
+sıkıştır	compress|compression
+bölümle	partition|partitioning
+çoğaltma|replikasyon	replication
+replika(?!s)	replica
+yansıtma	mirroring
+yük devretme	failover
+yüksek erişilebilirlik	high availability
+felaket kurtarma	disaster recovery
+erişilebilirlik grubu	availability group
+erişilebilirlik|kullanılabilirlik	availability
+küme	cluster
+düğüm	node
+birincil	primary
+ikincil	secondary
+eşitleme|senkronizasyon	sync|synchronization
+günlük gönderimi	log shipping
+işlem günlüğü	transaction log
+kurtarma modeli	recovery model
+tam yedek	full backup
+fark yedeği	differential backup
+artımlı	incremental
+anlık görüntü	snapshot
+döküm(?!an)	dump
+bakım	maintenance
+ajan	agent
+tutarlılık	consistency
+bütünlük	integrity
+yalıtım|izolasyon	isolation
+eşzamanlı	concurrent|concurrency
+eşzamansız	async|asynchronous
+toplu	batch|bulk
+migrasyon|göç	migration
+
+# Yazılım geliştirme
+kod	code
+değişken	variable
+sabit	constant
+yöntem|metot	method
+sınıf	class
+nesne	object
+dizi(?!n)	array
+sözlük	dictionary|dict
+döngü	loop
+koşul	condition
+parametre	parameter|param
+argüman	argument|arg
+dönüş değeri	return value
+tür(?!k)|tip(?!ik)	type
+metin	text
+karakter dizisi|dize	string
+sayı	number
+tarih	date
+saat dilimi	timezone|time zone
+zaman damgası	timestamp
+değer(?!lendir)	value
+sonuç	result
+çıktı(?:sı|yı|da|nın|ları)	output
+geri çağırma	callback
+birim testi	unit test
+entegrasyon testi	integration test
+kapsam	scope|coverage
+yeniden düzenle	refactor|refactoring
+paket	package
+bağımlılık	dependency|dependencies
+kütüphane	library|lib
+çerçeve	framework
+eklenti	plugin|addon|add-on|extension
+sürücü	driver
+arayüz	interface|ui
+ekran	screen
+pencere	window
+düğme|buton	button
+sayfa	page
+mesaj	message
+tüketici	consumer
+üretici	producer
+akış	flow|stream
+iş akışı	workflow
+boru hattı	pipeline
+yeniden dene|tekrar dene	retry
+anahtar kelime	keyword
+yorum	comment
+inceleme	review
+çekme isteği	pull request|pr
+sorun	issue
+çözüm	solution|fix
+adım	step
+
+# Git ve DevOps
+taahhüt	commit
+dal(?:ı|lar|da|dan|ın)	branch
+birleştir	merge
+çakışma	conflict
+yeniden temellendir	rebase
+etiket	tag|label
+çatal	fork
+klonla	clone
+depo(?!la)	repo|repository
+dağıtım	deploy|deployment
+derle	build|compile
+sürüm|versiyon	version
+yayınla	publish|release
+geri al	rollback|revert|undo
+yama	patch
+yapıt	artifact
+sürekli entegrasyon	continuous integration|ci
+ortam	environment|env
+canlı	prod|production
+konteyner|kapsayıcı	container
+imaj	image
+sanal makine	virtual machine|vm
+bulut	cloud
+altyapı	infrastructure|infra
+özellik bayrağı	feature flag
+
+# İş ve proje
+toplantı	meeting
+öncelik	priority
+son tarih	deadline
+tahmin	estimate
+paydaş	stakeholder
+müşteri	customer
+ekip|takım	team
+yönetici	admin|administrator
+onay	approval|approve
+geri bildirim	feedback
+belge|doküman	doc|document|documentation
+şablon	template
+varsayılan	default
+özellik	feature
+gereksinim	requirement
+mimari	architecture
+tasarım	design
+hedef	target|goal
+kural	rule
+politika	policy
+kontrol	check
+doğrula	verify|validate|validation
+karşılaştır	compare|comparison
+kullanım	usage

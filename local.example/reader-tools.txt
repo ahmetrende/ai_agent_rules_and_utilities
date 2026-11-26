@@ -1,0 +1,9 @@
+# Extra tools of the reader agent. One tool name per line.
+# scripts/install_subagents.sh adds them to the tools line of agents/reader.md.
+# The reader must stay read-only. The installer checks each name:
+# - A name with a word that changes data (create, delete, run, update, ...) is skipped.
+# - A name with a read word (get, list, query, search, ...) is added.
+# - Any other name is added only when the line ends with " read-only".
+#   Example: mcp__myserver__vm_top read-only
+mcp__myserver__query
+mcp__myserver__query_range

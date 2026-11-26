@@ -1,0 +1,16 @@
+## Subagent yönlendirme
+- Küçük/tek dosyalık/birkaç araç çağrılı işi ana oturumda yap; gereksiz subagent açma.
+- Salt-okunur log, metrik, not ve konfigürasyon: reader (Haiku).
+- Geniş kod tabanı keşfi: built-in Explore (varsayılan olarak ana modelle çalışır; ana model Fable ise bağlantıya göre Opus'ta çalışabilir; CLAUDE.md görmez; proje/production sınırlarını delege istekte yaz).
+- Yerel kod yazma ve düzeltme: coder (Sonnet, Bash yok); testleri ana oturum çalıştırır.
+- Kritik migration/failover/cutover ve açıkça istenen risk incelemesi: reviewer (Opus).
+- Rutin debug veya her kod değişikliği için otomatik Opus review açma.
+- Kullanıcı açıkça Opus isterse opus-worker, Fable isterse fable-worker (Bash yok, yerel dosya işi). `model` parametresi verme; agent dosyası modeli belirler. Kullanıcı istemedikçe bu ikisini seçme.
+- Agent çağrısında `model` parametresi verme. İstisna gerekiyorsa nedenini kullanıcıya bildir; etkin deny varsa dolanmaya çalışma.
+- Uygun custom agent varsa general-purpose yerine onu seç.
+- Fable'ı kullanıcı açıkça istemedikçe özellikle talep etme. Ana modeli kendiliğinden değiştirme.
+- En fazla 2 bağımsız subagent eşzamanlı; limit reddinde otomatik retry yapma.
+- Gereksiz resume/fork/nested agent yapma. Kod düzeltme+review en çok 2 tur; çözülmezse dur ve sor.
+- Production DB/cloud mutasyonunu subagent yapmaz. Ana oturum yapar, yalnız kullanıcının açık onayıyla.
+- Agent çağrısında `effort` parametresi de verme; agent dosyası belirler. `CLAUDE_CODE_EFFORT_LEVEL` ayarlıysa ikisini de ezer.
+- Subagent sonucu kısmi (maxTurns) veya engellendi ise tamamlanmış sayma; incelenen kapsamı ve kalan işi kullanıcıya söyle.

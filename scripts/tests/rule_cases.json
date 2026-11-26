@@ -1,0 +1,49 @@
+{
+  "about": "Sample tasks for the answer format in AGENTS.md. scripts/rule_check.py checks that each good answer passes and each bad answer fails. --live sends the prompts to claude -p and checks the real answers.",
+  "cases": [
+    {
+      "name": "short-answer",
+      "kind": "short",
+      "prompt": "Bu repo'da kaç tane skill var? Kısaca cevap ver, dosya okuma.",
+      "good": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRepo'da 6 skill var.\n\n- Türkçe: adhd-tr, humanizer-tr, sade-teknik-turkce.\n- İngilizce: i-have-adhd, humanizer, asd-ste100.\n\nSenden: bir şey beklenmiyor.\n",
+      "bad": [
+        "Repo'da 6 skill var.\n\nSenden: bir şey beklenmiyor.\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRepo'da 6 skill var.\n\n- adhd-tr\n- humanizer-tr\n- sade-teknik-turkce\n- i-have-adhd\n\nSenden: bir şey beklenmiyor.\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRepo'da 6 skill var — hepsi kurulu.\n\nSenden: bir şey beklenmiyor.\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRepo'da 6 skill var.\n\nSenden: bir şey beklenmiyor.\n\nUmarım yardımcı olur.\n"
+      ]
+    },
+    {
+      "name": "detailed-answer",
+      "kind": "detailed",
+      "prompt": "Terim profili nasıl çalışıyor? Detaylı açıkla.",
+      "good": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nProfil, senin mesajlarındaki terim seçimlerini sayar ve çoğunluğu listeye yazar.\n\n## Sayım\nScript her kavram için iki biçimi sayar. Örnek: dosya ve file.\n\n## Karar\nBir biçim en az %60 pay alırsa profile girer.\n\nSenden: bir şey beklenmiyor.\n",
+      "bad": [
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nProfil mesajlarını sayar.\n\nSenden: bir şey beklenmiyor.\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n## Sayım\nScript sayar.\n\nSenden: bir şey beklenmiyor.\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nProfil sayar.\n\n## Sayım\nScript sayar; sonra yazar.\n\n---\n\nSenden: bir şey beklenmiyor.\n"
+      ]
+    },
+    {
+      "name": "interim-status",
+      "kind": "interim",
+      "prompt": "(Arka planda bir test çalışırken biten turun yanıtı.)",
+      "good": "```\n⏳ Arka planda devam ediyor.\n```\n\nKurulum testi çalışıyor.\n",
+      "bad": [
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n```\n⏳ Arka planda devam ediyor.\n```\n\nKurulum testi çalışıyor.\n",
+        "⏳ Arka planda devam ediyor.\n\nKurulum testi çalışıyor.\n",
+        "```\n⏳ Arka planda devam ediyor.\n```\nKurulum testi çalışıyor.\nAyrıca dosyalar da güncelleniyor.\nSonra kurulum yapılacak.\n"
+      ]
+    },
+    {
+      "name": "tool-error",
+      "kind": "tool-error",
+      "prompt": "(Bir test fail ettikten sonraki yanıt.)",
+      "good": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTest `auth.spec.ts:42` satırında fail ediyor: beklenen 200, gelen 401.\n\n- Neden: auth header eksik.\n\nSenden: fix'i uygulayayım mı? Önerim: evet.\n",
+      "bad": [
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTestlere baktım, birkaç şey var.\n\nSenden: bir şey beklenmiyor.\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTest fail ediyor.\n"
+      ]
+    }
+  ]
+}

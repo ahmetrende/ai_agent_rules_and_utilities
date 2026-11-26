@@ -1,0 +1,6 @@
+{
+  "name": "oturum",
+  "version": "0.1.0",
+  "description": "Adds /oturum and a side pane: Claude sessions and the metadata of their last handoff notes, on this machine and over SSH.",
+  "types": "./types/index.d.ts"
+}

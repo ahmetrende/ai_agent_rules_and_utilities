@@ -1,0 +1,16 @@
+{
+  "name": "local-mods",
+  "owner": { "name": "local" },
+  "plugins": [
+    {
+      "name": "usage-feed",
+      "source": "./usage-feed",
+      "description": "Writes the plan usage the engine pushes (session.measure) to a file usage-limit.sh reads, so the model does not poll get_usage."
+    },
+    {
+      "name": "oturum",
+      "source": "./oturum",
+      "description": "Adds /oturum and a side pane: Claude sessions and the metadata of their last handoff notes, on this machine and over SSH."
+    }
+  ]
+}

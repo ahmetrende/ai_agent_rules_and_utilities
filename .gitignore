@@ -1,0 +1,6 @@
+.DS_Store
+generated/
+.claude/
+hooks/state/
+__pycache__/
+local/

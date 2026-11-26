@@ -1,0 +1,4 @@
+- Sektörüm: <sektör>
+- Mesleğim: <meslek>
+- Yaptığım işler: <bir cümle. Örnek: yazılım ve veritabanı işleri>
+- Kullandığım sistemler: <cloud, db, monitoring. Örnek: AWS, PostgreSQL, Grafana>

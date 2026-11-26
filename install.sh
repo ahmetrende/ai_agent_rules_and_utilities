@@ -1,0 +1,455 @@
+#!/usr/bin/env bash
+# Install ai_agent_rules for Claude Code.
+#
+# What it does:
+#   0. Asks for the personal files in local/ that are missing (local/ben.md and
+#      local/reader-tools.txt) with scripts/local_info.sh. Only when stdin is a
+#      terminal, and only once per file. Every answer is optional.
+#   1. Backs up the current ~/.claude/CLAUDE.md and skill links.
+#   2. Writes ~/.claude/CLAUDE.md. The file imports AGENTS.md, the always-on skills
+#      and rules/subagent-routing.md.
+#      AGENTS.md imports local/override.md and generated/term_profile.md.
+#      When local/override.md is missing, install.sh copies the template
+#      terms/override.md there first. --check writes nothing and reports it.
+#   3. Links every skill in this repo into ~/.claude/skills.
+#   4. Links sade-teknik-turkce into ~/.agents/skills (shared by other agents),
+#      only when that folder exists. The installer does not create it.
+#   5. Builds generated/term_profile.md from your Claude Code messages.
+#      Then writes the rules as one file for Codex (scripts/codex_rules.py):
+#      ~/.codex/AGENTS.md, or $CODEX_HOME/AGENTS.md. Only when that folder exists.
+#   6. Adds a SessionStart hook to ~/.claude/settings.json. The hook builds the
+#      profile again when it is older than 7 days. It runs in the background.
+#   7. Installs the handoff, usage-limit and secret-guard hooks and the usage-feed
+#      mod with scripts/install_hooks.sh. See docs/handoff_and_limit_hooks.md,
+#      docs/secret_guard.md and docs/usage_feed_mod.md.
+#   8. Installs the subagent setup with scripts/install_subagents.sh: five agent
+#      files in ~/.claude/agents, two deny rules and one env key in
+#      ~/.claude/settings.json. See docs/subagent_setup.md.
+#
+# Run it again after you move the repo or after "git pull". It is safe to run
+# more than once.
+#
+# "./install.sh --check" compares the installed setup with the repo: the imports
+# in ~/.claude/CLAUDE.md, the skill links, the term-profile SessionStart hook,
+# the hooks, the mod, the subagent setup and the Codex rules file. It also checks
+# the term profile cache (scripts/term_profile.py --check). It changes nothing. Exit 0 when
+# everything is in sync and the cache has no problem.
+# It also shows the state of the files in local/. A missing local file is not
+# an error.
+# "./install.sh --check-rules" runs only the first part of --check: the CLAUDE.md
+# imports, the skill links and the term-profile hook. scripts/status.sh uses it.
+# "./install.sh --status [--all]" shows the state on one screen with
+# scripts/status.sh. --all adds the machines in local/machines.md (SSH).
+# "./install.sh --preflight" runs the checks that must pass before an install.
+# It changes nothing.
+
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+  echo "usage: install.sh [--check | --status [--all] | --preflight]" >&2
+  exit 2
+}
+if [[ "${1-}" == "--status" ]]; then
+  shift
+  exec "${REPO_DIR}/scripts/status.sh" "$@"
+fi
+if [[ $# -gt 1 ]]; then
+  usage
+fi
+case "${1-}" in
+  "") MODE="install" ;;
+  --check) MODE="check" ;;
+  --check-rules) MODE="check-rules" ;;
+  --preflight)
+    "${REPO_DIR}/scripts/install_hooks.sh" --preflight
+    echo ""
+    "${REPO_DIR}/scripts/install_subagents.sh" --preflight
+    exit 0
+    ;;
+  *) usage ;;
+esac
+
+# Same rule as Claude Code: CLAUDE_CONFIG_DIR wins. An empty value counts as unset.
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}"
+AGENTS_SKILLS_DIR="${HOME}/.agents/skills"
+
+# Skills that load in every session (Turkish versions).
+# humanizer-tr and sade-teknik-turkce load on demand.
+# AGENTS.md holds a short summary of each.
+ALWAYS_ON_SKILLS=(adhd-tr)
+
+# All skills in this repo. English versions load on demand.
+ALL_SKILLS=(adhd-tr humanizer-tr sade-teknik-turkce i-have-adhd humanizer asd-ste100)
+
+# Skills to link into ~/.agents/skills. Skills managed by the skills CLI are not touched.
+SHARED_SKILLS=(sade-teknik-turkce)
+
+# Rule files of this repo that CLAUDE.md imports after the skills.
+RULE_FILES=(rules/subagent-routing.md)
+
+# Marked blocks of CLAUDE.md that this repo owns now. An old block with one of
+# these names is not kept: the import of its rule file replaces it.
+# Format: "<block name>:<rule file>".
+OWNED_BLOCKS=(subagent-duzeni:rules/subagent-routing.md)
+
+# Use "~/..." in import lines. Claude Code documents home-relative imports.
+# Only a path that is HOME or below HOME is shortened. A sibling such as
+# /home/user2 for HOME=/home/user keeps its full path.
+home_dir="${HOME%/}"
+if [[ -n "${home_dir}" && "${REPO_DIR}" == "${home_dir}" ]]; then
+  repo_import_path="~"
+elif [[ -n "${home_dir}" && "${REPO_DIR}" == "${home_dir}/"* ]]; then
+  repo_import_path="~/${REPO_DIR#"${home_dir}/"}"
+else
+  repo_import_path="${REPO_DIR}"
+fi
+
+# The first lines of the generated CLAUDE.md: a header and the imports.
+generated_lines=("<!-- Generated by ${repo_import_path}/install.sh. Edit the repo, not this file. Marked blocks (name:baslangic ... name:bitis) are kept on reinstall. -->")
+generated_lines+=("@${repo_import_path}/AGENTS.md")
+for skill in "${ALWAYS_ON_SKILLS[@]}"; do
+  generated_lines+=("@${repo_import_path}/skills/${skill}/SKILL.md")
+done
+for rule_file in "${RULE_FILES[@]}"; do
+  generated_lines+=("@${repo_import_path}/${rule_file}")
+done
+
+# The SessionStart hook that builds the term profile again when it is old.
+settings_file="${CLAUDE_DIR}/settings.json"
+hook_command="python3 '${REPO_DIR}/scripts/term_profile.py' --max-age-days 7 --quiet"
+
+# Move an existing file, folder, or link to the backup folder.
+backup_path() {
+  local path="$1"
+  local name="$2"
+  if [[ -e "${path}" || -L "${path}" ]]; then
+    mv "${path}" "${backup_dir}/${name}"
+  fi
+}
+
+# Link source to target. Skip when the link already points to source.
+link_skill() {
+  local source="$1"
+  local target="$2"
+  local backup_name="$3"
+  if [[ -L "${target}" && "$(readlink "${target}")" == "${source}" ]]; then
+    return
+  fi
+  backup_path "${target}" "${backup_name}"
+  ln -s "${source}" "${target}"
+}
+
+# Print the marked blocks of a CLAUDE.md file. Other installers own these blocks.
+# A block starts with "<!-- name:baslangic -->" and ends with "<!-- name:bitis -->".
+# Only complete blocks are printed. Each block gets a blank line before it.
+# A block whose name is in OWNED_BLOCKS is not printed. Its lines without the
+# two marker lines go to the file "<owned dir>/<name>".
+print_marked_blocks() {
+  local owned_names=" " entry
+  for entry in "${OWNED_BLOCKS[@]}"; do
+    owned_names="${owned_names}${entry%%:*} "
+  done
+  awk -v owned="${owned_names}" -v owned_dir="$2" '
+    function warn_open() {
+      print "warning: marked block \"" name "\" in the old CLAUDE.md has no end marker. It was not kept." > "/dev/stderr"
+    }
+    /^<!-- [A-Za-z0-9_.-]+:baslangic -->[[:space:]]*$/ {
+      if (inb) warn_open()
+      inb = 1; name = $2; sub(/:baslangic$/, "", name); buf = $0 "\n"; body = ""; next
+    }
+    inb && /^<!-- [A-Za-z0-9_.-]+:bitis -->[[:space:]]*$/ {
+      end_name = $2; sub(/:bitis$/, "", end_name)
+      if (end_name == name) {
+        if (index(owned, " " name " ") > 0) {
+          printf "%s", body > (owned_dir "/" name)
+          close(owned_dir "/" name)
+        } else {
+          printf "\n%s%s\n", buf, $0
+        }
+        inb = 0; buf = ""; body = ""; next
+      }
+    }
+    inb { buf = buf $0 "\n"; body = body $0 "\n" }
+    END { if (inb) warn_open() }
+  ' "$1"
+}
+
+# Print the lines of a CLAUDE.md file that are outside every marked block.
+# The lines of a block without an end marker are not printed: print_marked_blocks
+# warns about that block already.
+print_unmarked_lines() {
+  awk '
+    /^<!-- [A-Za-z0-9_.-]+:baslangic -->[[:space:]]*$/ {
+      inb = 1; name = $2; sub(/:baslangic$/, "", name); next
+    }
+    inb && /^<!-- [A-Za-z0-9_.-]+:bitis -->[[:space:]]*$/ {
+      end_name = $2; sub(/:bitis$/, "", end_name)
+      if (end_name == name) { inb = 0; next }
+    }
+    !inb { print }
+  ' "$1"
+}
+
+# Print the CLAUDE.md that install.sh writes: the generated lines, then the
+# marked blocks of the old file when there is one. Owned blocks go to owned_dir.
+render_claude_md() {
+  local old_file="$1"
+  local owned_dir="$2"
+  printf '%s\n' "${generated_lines[@]}"
+  if [[ -f "${old_file}" ]]; then
+    print_marked_blocks "${old_file}" "${owned_dir}"
+  fi
+}
+
+# Print the state of one skill link. Return 1 when install.sh would change it.
+check_skill_link() {
+  local source="$1"
+  local target="$2"
+  local name="$3"
+  local dest
+  if [[ -L "${target}" ]]; then
+    dest="$(readlink "${target}")"
+    if [[ "${dest}" == "${source}" ]]; then
+      echo "  ok        ${name}"
+      return 0
+    fi
+    echo "  differs   ${name} links to ${dest} (install.sh links it to ${source})"
+  elif [[ -e "${target}" ]]; then
+    echo "  differs   ${name} is not a symlink (install.sh moves it to the backup folder and links ${source})"
+  else
+    echo "  missing   ${name} (install.sh links it to ${source})"
+  fi
+  return 1
+}
+
+# Compare the parts that install.sh installs itself with the repo: the imports
+# in CLAUDE.md, the skill links and the term-profile hook. Changes nothing.
+# Uses the folder check_tmp. Returns 1 when something is not in sync.
+check_rules() {
+  local out_of_sync=0 md_items=0 line skill hook_state hook_rc=0
+  local claude_md="${CLAUDE_DIR}/CLAUDE.md"
+
+  echo "Rules setup. Check only. Nothing is changed."
+  echo "Config dir:  ${CLAUDE_DIR}"
+  echo ""
+
+  echo "Override file: ${REPO_DIR}/local/override.md"
+  if [[ -f "${REPO_DIR}/local/override.md" ]]; then
+    echo "  ok        local/override.md"
+  else
+    echo "  missing   local/override.md (install.sh creates it from terms/override.md)"
+  fi
+  echo ""
+
+  echo "Main rules: ${claude_md}"
+  if [[ ! -e "${claude_md}" ]]; then
+    echo "  missing   CLAUDE.md (install.sh writes it)"
+    md_items=1
+  elif [[ ! -f "${claude_md}" ]]; then
+    echo "  differs   CLAUDE.md is not a regular file (install.sh moves it to the backup folder and writes a file)"
+    md_items=1
+  else
+    for line in "${generated_lines[@]:1}"; do
+      if grep -q -x -F -e "${line}" "${claude_md}"; then
+        echo "  ok        ${line}"
+      else
+        echo "  missing   ${line} (install.sh writes it)"
+        md_items=$((md_items + 1))
+      fi
+    done
+    if [[ -L "${claude_md}" ]]; then
+      echo "  differs   CLAUDE.md is a symlink (install.sh moves it to the backup folder and writes a file)"
+      md_items=$((md_items + 1))
+    fi
+    mkdir "${check_tmp}/owned"
+    render_claude_md "${claude_md}" "${check_tmp}/owned" > "${check_tmp}/CLAUDE.md"
+    if ! cmp -s "${claude_md}" "${check_tmp}/CLAUDE.md"; then
+      echo "  differs   install.sh would write other text. Difference (< now, > after install.sh):"
+      diff "${claude_md}" "${check_tmp}/CLAUDE.md" | sed 's/^/      /' || true
+      # A missing import explains the difference already. Count it only once.
+      if [[ "${md_items}" -eq 0 ]]; then
+        md_items=1
+      fi
+    fi
+  fi
+  out_of_sync=$((out_of_sync + md_items))
+  echo ""
+
+  echo "Skill links: ${CLAUDE_DIR}/skills"
+  for skill in "${ALL_SKILLS[@]}"; do
+    check_skill_link "${REPO_DIR}/skills/${skill}" "${CLAUDE_DIR}/skills/${skill}" "${skill}" \
+      || out_of_sync=$((out_of_sync + 1))
+  done
+  echo ""
+
+  echo "Shared skill links: ${AGENTS_SKILLS_DIR}"
+  if [[ -d "${AGENTS_SKILLS_DIR}" ]]; then
+    for skill in "${SHARED_SKILLS[@]}"; do
+      check_skill_link "${REPO_DIR}/skills/${skill}" "${AGENTS_SKILLS_DIR}/${skill}" "${skill}" \
+        || out_of_sync=$((out_of_sync + 1))
+    done
+  else
+    echo "  skipped   the folder does not exist. install.sh does not create it."
+  fi
+  echo ""
+
+  echo "Term profile hook: ${settings_file} (SessionStart)"
+  hook_state="$(python3 "${REPO_DIR}/scripts/install_hook.py" --check "${settings_file}" "${hook_command}")" \
+    || hook_rc=$?
+  case "${hook_rc}:${hook_state}" in
+    0:ok)
+      echo "  ok        ${hook_command}"
+      ;;
+    1:missing)
+      echo "  missing   ${hook_command} (install.sh adds it)"
+      out_of_sync=$((out_of_sync + 1))
+      ;;
+    1:outdated)
+      echo "  outdated  an older or extra copy of the hook, for example from another repo folder"
+      echo "            (install.sh keeps one copy: ${hook_command})"
+      out_of_sync=$((out_of_sync + 1))
+      ;;
+    *)
+      echo "  STOP      scripts/install_hook.py could not read settings.json (the installer stops)"
+      out_of_sync=$((out_of_sync + 1))
+      ;;
+  esac
+  echo ""
+
+  if [[ "${out_of_sync}" -eq 0 ]]; then
+    echo "Result: in sync. install.sh would write the same imports, links and hook."
+    return 0
+  fi
+  echo "Result: NOT in sync (${out_of_sync} items). Run install.sh to fix it."
+  return 1
+}
+
+if [[ "${MODE}" == "check" || "${MODE}" == "check-rules" ]]; then
+  temp_root="${TMPDIR:-/tmp}"
+  check_tmp="$(mktemp -d "${temp_root%/}/install-check.XXXXXX")"
+  trap 'rm -rf "${check_tmp}"' EXIT
+  # Run every check, also when one of them reports a difference.
+  check_result=0
+  check_rules || check_result=1
+  if [[ "${MODE}" == "check-rules" ]]; then
+    exit "${check_result}"
+  fi
+  echo ""
+  "${REPO_DIR}/scripts/install_hooks.sh" --check || check_result=1
+  echo ""
+  "${REPO_DIR}/scripts/install_subagents.sh" --check || check_result=1
+  echo ""
+  python3 "${REPO_DIR}/scripts/term_profile.py" --check || check_result=1
+  echo ""
+  python3 "${REPO_DIR}/scripts/codex_rules.py" --check "${ALWAYS_ON_SKILLS[@]}" || check_result=1
+  echo ""
+  # Information only: a missing local file does not change the result.
+  "${REPO_DIR}/scripts/local_info.sh" --check || true
+  exit "${check_result}"
+fi
+
+# Create local/override.md from the template when it is missing.
+if [[ ! -f "${REPO_DIR}/local/override.md" ]]; then
+  (umask 077 && mkdir -p "${REPO_DIR}/local")
+  cp "${REPO_DIR}/terms/override.md" "${REPO_DIR}/local/override.md"
+  chmod 600 "${REPO_DIR}/local/override.md"
+  echo "Created local/override.md from terms/override.md."
+fi
+
+# Check the tools and settings.json before anything changes.
+"${REPO_DIR}/scripts/install_hooks.sh" --preflight
+"${REPO_DIR}/scripts/install_subagents.sh" --preflight
+
+# 0. Ask for the missing local files. The setup works without them, so an error
+# here does not stop the install.
+if ! "${REPO_DIR}/scripts/local_info.sh"; then
+  echo "WARNING: scripts/local_info.sh failed. The install goes on without the local files." >&2
+fi
+
+mkdir -p "${CLAUDE_DIR}/backups" "${CLAUDE_DIR}/skills"
+# mktemp gives a unique folder, so two runs in the same second do not collide.
+backup_dir="$(mktemp -d "${CLAUDE_DIR}/backups/ai_agent_rules-$(date +%Y%m%d-%H%M%S)-XXXX")"
+
+# 1-2. Back up and write ~/.claude/CLAUDE.md. Keep the marked blocks of the old file.
+backup_path "${CLAUDE_DIR}/CLAUDE.md" "CLAUDE.md"
+owned_dir="$(mktemp -d "${backup_dir}/owned-blocks-XXXX")"
+render_claude_md "${backup_dir}/CLAUDE.md" "${owned_dir}" > "${CLAUDE_DIR}/CLAUDE.md"
+
+# The new file keeps only the generated lines and the marked blocks. Warn about the
+# other lines of the old file: blank lines, an older header and the lines that the
+# new file has again are not reported.
+if [[ -f "${backup_dir}/CLAUDE.md" ]]; then
+  dropped_lines="$(print_unmarked_lines "${backup_dir}/CLAUDE.md" \
+    | grep -v -e '^[[:space:]]*$' -e '^<!-- Generated by ' \
+    | grep -v -x -F -f <(printf '%s\n' "${generated_lines[@]}") || true)"
+  if [[ -n "${dropped_lines}" ]]; then
+    echo "WARNING: CLAUDE.md: these lines of the old file were outside a marked block. The new file does not have them:" >&2
+    printf '%s\n' "${dropped_lines}" | sed 's/^/    /' >&2
+    echo "         The old file is in ${backup_dir}/CLAUDE.md." >&2
+    echo "         To keep a line on reinstall, put it between <!-- <name>:baslangic --> and <!-- <name>:bitis --> lines." >&2
+  fi
+fi
+
+# Report each old block that the repo owns now. Warn when its text was not the
+# same as the rule file: the backup holds the old text.
+for entry in "${OWNED_BLOCKS[@]}"; do
+  block_name="${entry%%:*}"
+  rule_file="${entry#*:}"
+  if [[ -f "${owned_dir}/${block_name}" ]]; then
+    if cmp -s "${owned_dir}/${block_name}" "${REPO_DIR}/${rule_file}"; then
+      echo "CLAUDE.md: the marked block \"${block_name}\" was replaced by the import of ${rule_file}. The text is the same."
+    else
+      echo "WARNING: CLAUDE.md: the marked block \"${block_name}\" was replaced by the import of ${rule_file}, but its text was not the same as that file." >&2
+      echo "         The old text is in ${backup_dir}/CLAUDE.md. Difference (< old block, > ${rule_file}):" >&2
+      diff "${owned_dir}/${block_name}" "${REPO_DIR}/${rule_file}" | sed 's/^/    /' >&2 || true
+    fi
+  fi
+done
+rm -rf "${owned_dir}"
+
+# 3. Link skills into ~/.claude/skills.
+for skill in "${ALL_SKILLS[@]}"; do
+  link_skill "${REPO_DIR}/skills/${skill}" "${CLAUDE_DIR}/skills/${skill}" "claude-skill-${skill}"
+done
+
+# 4. Link shared skills into ~/.agents/skills.
+if [[ -d "${AGENTS_SKILLS_DIR}" ]]; then
+  for skill in "${SHARED_SKILLS[@]}"; do
+    link_skill "${REPO_DIR}/skills/${skill}" "${AGENTS_SKILLS_DIR}/${skill}" "agents-skill-${skill}"
+  done
+fi
+
+# 5. Build the term profile.
+python3 "${REPO_DIR}/scripts/term_profile.py"
+
+# 5b. Write the rules file for Codex. A failure does not stop the install.
+if ! python3 "${REPO_DIR}/scripts/codex_rules.py" --install "${ALWAYS_ON_SKILLS[@]}"; then
+  echo "WARNING: scripts/codex_rules.py failed. Codex does not get the new rules." >&2
+fi
+
+# 6. Add the SessionStart hook to ~/.claude/settings.json.
+if [[ -e "${settings_file}" ]]; then
+  cp -p "${settings_file}" "${backup_dir}/settings.json"
+fi
+# A command substitution inside echo hides the exit code from "set -e". Check it here.
+if ! hook_result="$(python3 "${REPO_DIR}/scripts/install_hook.py" "${settings_file}" "${hook_command}")"; then
+  echo "ERROR: scripts/install_hook.py could not add the SessionStart hook to ${settings_file}." >&2
+  echo "       The install stops. The term profile is not refreshed at session start." >&2
+  if [[ -f "${backup_dir}/settings.json" ]]; then
+    echo "       The settings.json from before this run is in ${backup_dir}/settings.json." >&2
+  fi
+  exit 1
+fi
+echo "settings.json hook: ${hook_result}"
+
+# 7. Install the hooks and the usage-feed mod. The script makes its own backups.
+"${REPO_DIR}/scripts/install_hooks.sh"
+
+# 8. Install the subagent setup. The script makes its own backups.
+"${REPO_DIR}/scripts/install_subagents.sh"
+
+echo "Installed from: ${REPO_DIR}"
+echo "Backup folder:  ${backup_dir}"
+echo "Start a new Claude Code session to load the rules."
