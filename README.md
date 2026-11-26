@@ -24,6 +24,8 @@ Tek komutla kurulur. Bir makineye de kurabilirsin, istediğin kadar makineye de.
 
 > İpucu: Bu repo'nun adresini Claude Code'a veya Codex'e ver ve "bunu kur" de. Agent repo'yu indirip kurulumu senin yerine yapabilir. Önce `./install.sh --check` çıktısını göstermesini iste: böylece neyin değişeceğini kurulumdan önce görürsün.
 
+Tanıtım slaytları (LinkedIn için, 7 PNG ve HTML kaynağı): [assets/social](assets/social/).
+
 ## Gereksinimler
 
 - macOS veya Linux. Windows desteği daha sonra eklenecek.
