@@ -32,3 +32,5 @@ Bu repo'daki İngilizce skill'ler, aşağıdaki repo'lardan değiştirilmeden ko
 4. Değişiklikleri ilgili Türkçe sürüme elle aktar.
 
 Lisans metinleri her skill klasöründe `LICENSE` dosyası olarak durur. Türkçe sürümler de kaynaklarının `LICENSE` dosyasını taşır.
+
+Kök dizindeki `LICENSE` (MIT) bu repo'nun kendi içeriği içindir. Yukarıdaki upstream skill'ler ve onlardan uyarlanan `adhd-tr` ile `humanizer-tr`, kaynaklarının MIT lisansıyla gelir. Asıl yazarlar her klasördeki `LICENSE` dosyasında ve bu dosyanın tablosunda yazar.
