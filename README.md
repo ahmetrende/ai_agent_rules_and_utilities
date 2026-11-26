@@ -1,4 +1,4 @@
-# ai_agent_rules_and_utilities
+# AI Agent Rules and Utilities
 
 ![AI Agent Rules and Utilities: AI agent'ları için Türkçe kurallar, hook'lar ve araçlar](assets/hero.svg)
 
