@@ -1,6 +1,6 @@
 # ai_agent_rules_and_utilities
 
-![ai_agent_rules_and_utilities: AI agent'ları için Türkçe kurallar, hook'lar ve araçlar](assets/hero.svg)
+![AI Agent Rules and Utilities: AI agent'ları için Türkçe kurallar, hook'lar ve araçlar](assets/hero.svg)
 
 Claude Code ve Codex ile çalışırken her oturumda geçerli olan kurallar, skill'ler, hook'lar ve araçlar.
 
